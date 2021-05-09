@@ -30,7 +30,14 @@ def get_default_images_path_and_text(path: str):
     return default_images_path, text[:-2]
 
 
-def get_transliterated_text(text: str) -> str:
+def get_transliterated_text(text: str, url: str) -> str:
+    """
+    Приводит текст к транслиту.
+    Например:
+        Казань -> kazan,
+        Речка -> rechka
+        и т.д.
+    """
     data = {
         "in": f"{text}",
         "translate": "перевести",
@@ -49,13 +56,14 @@ def get_transliterated_text(text: str) -> str:
         "n33": "ya"
     }
     response = requests.post(url=url, data=data)
-    r_text = response.text
-    html = bs4.BeautifulSoup(r_text, "lxml")
-    return html.find(attrs={"id": "out"}).text
+    if response.status_code == 200:
+        r_text = response.text
+        html = bs4.BeautifulSoup(r_text, "lxml")
+        return html.find(attrs={"id": "out"}).text
 
 
 default_images_path, text = get_default_images_path_and_text(images_in)
-transliterated_text = get_transliterated_text(text).split(", ")
+transliterated_text = get_transliterated_text(text, url).split(", ")
 
 
 def resize_image(image: str, resolution: tuple) -> np.ndarray:
