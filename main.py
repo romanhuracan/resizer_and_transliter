@@ -7,36 +7,46 @@ import numpy as np
 import requests
 
 
-url = "http://translit-online.ru/"
+URL = "http://translit-online.ru/"
 
 images_in = os.path.normpath("/home/roman/Изображения/Блюда")
 RESOLUTIONS = [(340, 226), (600, 400)]
 
 
-def get_default_images_path_and_text(path: str):
+def get_images_path_and_text(path: str) -> tuple:
+    """
+    Собирает исходные пути до фотографий,
+    объединяет имена файлов в единую строку.
+
+    input: путь до папки с фотографиями.
+
+    output 1: список, содержащий полный путь до каждой картинки.
+    Пример: ["/home/roman/images/my photo.jpg", ...]
+
+    output 2: строка, содержащая имена файлов без расширения через запятую. Пробелы заменяются на дефис.
+    Пример: "my-photo, my-photo-2, my-photo-3, ..."
+    """
     default_images_path = []
     text = ""
     for root, *_, images in os.walk(path):
         if root == path:
             for image in images:
-                # добавить путь исходной картинки в список
                 path = os.path.join(root, image)
                 default_images_path.append(path)
 
-                # запомнить имя исходной картинки
                 default_image_name = image.split(".jpg")[0].replace(" ", "-").lower()
                 text += default_image_name + ", "
 
     return default_images_path, text[:-2]
 
 
-def get_transliterated_text(text: str, url: str) -> str:
+def get_transliterated_text(text: str) -> str:
     """
-    Приводит текст к транслиту.
-    Например:
-        Казань -> kazan,
-        Речка -> rechka
-        и т.д.
+    Преобразует русский текст в английскую транслитерацию.
+    input: строка, содержащая имена файлов через запятую без расширения.
+
+    output: строка в транслитерированном виде.
+    Пример: Казань -> kazan, речка -> rechka, ...
     """
     data = {
         "in": f"{text}",
@@ -55,15 +65,15 @@ def get_transliterated_text(text: str, url: str) -> str:
         "n32": "yu",
         "n33": "ya"
     }
-    response = requests.post(url=url, data=data)
+    response = requests.post(url=URL, data=data)
     if response.status_code == 200:
         r_text = response.text
         html = bs4.BeautifulSoup(r_text, "lxml")
-        return html.find(attrs={"id": "out"}).text
+        return html.find(attrs={"id": "out"}).text.split(", ")
 
 
-default_images_path, text = get_default_images_path_and_text(images_in)
-transliterated_text = get_transliterated_text(text, url).split(", ")
+default_images_path, text = get_images_path_and_text(images_in)
+transliterated_text = get_transliterated_text(text)
 
 
 def resize_image(image: str, resolution: tuple) -> np.ndarray:
@@ -73,7 +83,7 @@ def resize_image(image: str, resolution: tuple) -> np.ndarray:
     )
 
 
-def save_image(image: np.ndarray, image_name: str, user_wants_overwrite_file: bool):
+def save_image(image: np.ndarray, image_name: str, user_wants_overwrite_file: bool = None):
     if not isinstance(image, np.ndarray):
         raise ValueError(f"Картинка должна быть экземпляром {np.ndarray}")
 
